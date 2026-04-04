@@ -6176,7 +6176,6 @@ int rtw89_core_init(struct rtw89_dev *rtwdev)
 		return -ENOMEM;
 	spin_lock_init(&rtwdev->ba_lock);
 	spin_lock_init(&rtwdev->rpwm_lock);
-	mutex_init(&rtwdev->rf_mutex);
 	rtwdev->total_sta_assoc = 0;
 
 	rtw89_init_wait(&rtwdev->mcc.wait);
@@ -6235,7 +6234,6 @@ void rtw89_core_deinit(struct rtw89_dev *rtwdev)
 	__rtw89_fw_free_all_early_h2c(rtwdev);
 
 	destroy_workqueue(rtwdev->txq_wq);
-	mutex_destroy(&rtwdev->rf_mutex);
 }
 EXPORT_SYMBOL(rtw89_core_deinit);
 
