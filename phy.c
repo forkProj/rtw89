@@ -809,10 +809,24 @@ void rtw89_phy_ra_assoc(struct rtw89_dev *rtwdev, struct rtw89_sta_link *rtwsta_
 	rtw89_fw_h2c_ra(rtwdev, ra, csi);
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(7, 0, 0)
+static void rtw89_phy_ra_recalc_agg_limit_iter(void *data,
+					       struct ieee80211_sta *sta)
+{
+	struct rtw89_sta *rtwsta = sta_to_rtwsta(sta);
+	u16 *agg_num = (u16 *)data;
+	u8 tid;
+
+	for_each_set_bit(tid, rtwsta->ampdu_map, IEEE80211_NUM_TIDS)
+		*agg_num = min(*agg_num, rtwsta->ampdu_params[tid].agg_num);
+}
+#endif
+
 void rtw89_phy_ra_recalc_agg_limit(struct rtw89_dev *rtwdev)
 {
 	const struct rtw89_mac_gen_def *mac = rtwdev->chip->mac_def;
 	const struct rtw89_reg_def *ra_limit = &mac->ra_agg_limit;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 0, 0)
 	struct ieee80211_sta *sta;
 	struct rtw89_sta *rtwsta;
 	u16 agg_num = U16_MAX;
@@ -824,6 +838,13 @@ void rtw89_phy_ra_recalc_agg_limit(struct rtw89_dev *rtwdev)
 		for_each_set_bit(tid, rtwsta->ampdu_map, IEEE80211_NUM_TIDS)
 			agg_num = min(agg_num, rtwsta->ampdu_params[tid].agg_num);
 	}
+#else
+	u16 agg_num = U16_MAX;
+
+	ieee80211_iterate_stations_mtx(rtwdev->hw,
+				       rtw89_phy_ra_recalc_agg_limit_iter,
+				       &agg_num);
+#endif
 
 	if (agg_num == U16_MAX)
 		agg_num = 0x3F;

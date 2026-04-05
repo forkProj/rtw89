@@ -3294,6 +3294,31 @@ void rtw89_core_tid_rx_stats_ctrl(struct rtw89_dev *rtwdev, struct rtw89_sta *rt
 	}
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(7, 0, 0)
+static void rtw89_core_tid_rx_stats_reset_iter(void *data,
+					       struct ieee80211_sta *sta)
+{
+	struct rtw89_sta *rtwsta = sta_to_rtwsta(sta);
+	struct rtw89_tid_stats *tid_stats;
+	u16 tid;
+
+	for (tid = 0; tid < IEEE80211_NUM_TIDS; tid++) {
+		tid_stats = &rtwsta->tid_rx_stats[tid];
+
+		if (!tid_stats->started)
+			continue;
+
+		__rtw89_core_tid_rx_stats_reset(tid_stats);
+	}
+}
+
+void rtw89_core_tid_rx_stats_reset(struct rtw89_dev *rtwdev)
+{
+	ieee80211_iterate_stations_mtx(rtwdev->hw,
+				       rtw89_core_tid_rx_stats_reset_iter,
+				       NULL);
+}
+#else
 void rtw89_core_tid_rx_stats_reset(struct rtw89_dev *rtwdev)
 {
 	struct rtw89_tid_stats *tid_stats;
@@ -3314,6 +3339,7 @@ void rtw89_core_tid_rx_stats_reset(struct rtw89_dev *rtwdev)
 		}
 	}
 }
+#endif
 
 static bool rtw89_core_skb_pn_valid(struct rtw89_dev *rtwdev,
 				    struct rtw89_rx_desc_info *desc_info,
